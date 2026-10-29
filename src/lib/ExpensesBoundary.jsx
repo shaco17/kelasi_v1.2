@@ -1,0 +1,2 @@
+import React from 'react';
+export default class ExpensesBoundary extends React.Component{constructor(p){super(p);this.state={error:false}}static getDerivedStateFromError(){return {error:true}}componentDidCatch(){ }render(){return this.state.error?<section className="panel"><h2>Dépenses momentanément indisponible</h2><p>Tes données locales restent intactes. Tu peux continuer dans un autre onglet.</p><button className="btn-secondary" onClick={()=>this.setState({error:false})}>Réessayer</button></section>:this.props.children}}

@@ -1,4 +1,5 @@
 import { migrateData } from './migrate.js';
+import { blankDepenses, mergeExpenseData } from './depenses.js';
 
 export function mergeRows(remote = [], local = []) {
   const rows = new Map(remote.map(row => [row.id, row]));
@@ -17,8 +18,10 @@ export function mergeData(remote, local, defaults = {}) {
   const deletedSnapshotIds = [...new Set([...(base.deletedSnapshotIds || []), ...(loc.deletedSnapshotIds || [])])];
   const deletedGoalIds = [...new Set([...(base.deletedGoalIds || []), ...(loc.deletedGoalIds || [])])];
   const deletedDebtIds = [...new Set([...(base.deletedDebtIds || []), ...(loc.deletedDebtIds || [])])];
+  const expenses = mergeExpenseData({ ...blankDepenses(), ...base }, { ...blankDepenses(), ...loc });
   return {
     ...migrateData({ ...defaults, ...base, ...loc }),
+    ...expenses,
     entries: mergeRows(base.entries || [], loc.entries || []).filter(row => !deletedEntryIds.includes(row.id)),
     snapshots: mergeRows(base.snapshots || [], loc.snapshots || []).filter(row => !deletedSnapshotIds.includes(row.id)),
     goals: mergeRows(base.goals || [], loc.goals || []).filter(row => !deletedGoalIds.includes(row.id)),

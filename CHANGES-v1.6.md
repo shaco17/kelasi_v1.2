@@ -1,0 +1,9 @@
+# KELASI v1.6.0 — Dépenses
+
+- Ajout d’un onglet **Dépenses**, sans toucher aux onglets/fonctions antérieurs. La navigation mobile garde six raccourcis lisibles (Accueil, Versements, Dépenses, Projets, Banque, Réglages); les autres pages restent dans la sidebar/menu mobile.
+- Comptes, catégories, opérations (dépense/revenu/virement), reçus image compressés en data URL, tableau de bord mensuel, recherche/filtres/tri, budgets et échéances récurrentes hebdo/mensuelles/annuelles. Les dépenses sont calculées à part de l’épargne.
+- Clés offline dédiées : `kelasi-depenses-<userId>-comptes`, `-categories`, `-transactions`, `-recurrences`, `-budgets`, `-deletedDepenseIds`; le stockage historique `kelasi-data-<userId>` et son contenu existant sont conservés.
+- Sauvegarde globale JSON : ajout de `depenses` et import rétrocompatible de sauvegardes antérieures. Aucun export CSV/PDF/Excel des dépenses.
+- Synchronisation Supabase best-effort, IDs persistants, fusion timestampée et registre de suppressions V1.4. Exécuter `SUPABASE_DEPENSES_V1.6.sql` avant le déploiement cloud : il crée cinq tables RLS par utilisateur et étend le CHECK des tombstones. Sans tables disponibles, la copie locale demeure; vérifier le schéma Supabase après exécution SQL.
+- Test/build : `npm ci` (npm 10.9.2 local) puis tests et build réussis. Les tests couvrent soldes/virements, occurrences idempotentes, budgets, agrégations, tombstones et restauration ancienne. Bundle JS > 500 kB signalé par Vite; npm signale 7 vulnérabilités héritées/dépendances (5 faibles, 1 modérée, 1 élevée).
+- **Limites non validées visuellement** : pas de navigateur/test e2e ni de projet Supabase disponible; rendu téléphone/tablette/paysage, exécution réelle SQL/RLS et synchronisation multi-appareils non vérifiés visuellement/en production.
