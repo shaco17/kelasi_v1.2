@@ -38,3 +38,96 @@ button.bank-balance-card { width: 100%; border: 0; color: inherit; font: inherit
 .deadline-sort{display:inline-flex;align-items:center;gap:5px;margin-left:15px;color:var(--muted);font-size:9px;letter-spacing:0;font-weight:600}.project-deadline{margin-top:10px;color:var(--muted);font-size:9px}.debt-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.debt-card{cursor:pointer}.debt-card h3{font:750 15px Manrope,sans-serif;margin:16px 0 10px}.debt-card p,.debt-card small{font-size:10px;color:var(--muted);line-height:1.5}.debt-quick-actions{display:inline-block;margin:10px 8px 0 0}.debt-schedule{max-height:50vh;overflow:auto;padding:0 20px}.debt-schedule-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);font-size:11px}.debt-schedule-row span{flex:1}.debt-schedule-row strong{color:var(--green)}.debt-bank-info{grid-column:1/-1}.debt-forecast-readonly{margin:18px 0}.debt-forecast-readonly .scenario-line{display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid var(--border);font-size:10px}.currency-panel{max-width:680px}.currency-panel .btn-secondary{margin:0 0 18px}.conversion-result{padding:18px;border-radius:12px;background:var(--green-soft);color:var(--green-dark);font-weight:800;font-size:22px;margin:18px 0 8px}.settings-field>input[type=checkbox]{accent-color:var(--green)}
 @media(max-width:1000px){.debt-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){.debt-grid{grid-template-columns:1fr}.debt-quick-actions{display:block}.deadline-sort{margin-left:8px}.conversion-result{font-size:18px}}
+
+
+/* Ajustements responsives additionnels V1.3 — navigation pilotée par la largeur. */
+@media (min-width: 768px) {
+  .sidebar { transform: none; }
+  .mobile-bottom-nav { display: none !important; }
+  .main-area { min-width: 0; }
+  .page-content { width: 100%; min-width: 0; }
+  .stats-grid, .projects-grid, .debt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .checkin-grid { grid-template-columns: repeat(auto-fill, minmax(24px, 1fr)); }
+  .modal-overlay { align-items: center; }
+  .modal-card { max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain; }
+}
+
+@media (min-width: 1024px) {
+  .stats-grid, .projects-grid, .debt-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hero-grid { grid-template-columns: minmax(0, 1.45fr) minmax(275px, .85fr); }
+  .dashboard-lower { grid-template-columns: minmax(0, 1.17fr) minmax(290px, .83fr); }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .sidebar { width: 205px; padding-left: 12px; padding-right: 12px; }
+  .main-area { margin-left: 205px; }
+  .page-content { padding-left: clamp(20px, 3vw, 32px); padding-right: clamp(20px, 3vw, 32px); }
+  .topbar { padding-left: clamp(20px, 3vw, 32px); padding-right: clamp(20px, 3vw, 32px); }
+  .stats-grid, .projects-grid, .debt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-lower, .hero-grid, .forecast-hero-grid, .forecast-bottom-grid, .calculator-layout, .bank-top-grid, .settings-layout { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .checkin-grid { grid-template-columns: repeat(auto-fill, minmax(25px, 1fr)); }
+  .checkin-cell { height: 25px; }
+}
+
+/* Assurer la continuité de la navigation mobile à l'ancien seuil 720–767px. */
+@media (min-width: 721px) and (max-width: 767px) {
+  .sidebar { width: 270px; transform: translateX(-102%); }
+  .menu-open .sidebar { transform: translateX(0); }
+  .menu-open .menu-scrim { display: block; position: fixed; inset: 0; border: 0; background: #0b241a78; z-index: 19; }
+  .main-area { margin-left: 0; padding-bottom: 70px; }
+  .mobile-menu { display: grid; }
+  .mobile-close { display: grid; margin-left: auto; }
+  .mobile-bottom-nav { position: fixed; display: flex; bottom: 0; left: 0; right: 0; height: 67px; padding: 5px 5px calc(5px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--border); z-index: 18; justify-content: space-around; }
+  .mobile-bottom-nav button { border: 0; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; flex: 1; font-size: 8px; border-radius: 8px; }
+}
+
+/* Téléphones tenus en paysage : bottom-nav compacte et hauteur utile maximisée. */
+@media (max-width: 1023px) and (orientation: landscape) and (max-height: 500px) {
+  .sidebar { width: 270px; transform: translateX(-102%); }
+  .menu-open .sidebar { transform: translateX(0); }
+  .main-area { margin-left: 0; padding-bottom: calc(38px + env(safe-area-inset-bottom, 0px)); }
+  .mobile-menu, .mobile-close { display: grid; }
+  .mobile-bottom-nav {
+    display: flex !important;
+    height: calc(38px + env(safe-area-inset-bottom, 0px));
+    padding: 3px 8px env(safe-area-inset-bottom, 0px);
+    left: env(safe-area-inset-left, 0px);
+    right: env(safe-area-inset-right, 0px);
+  }
+  .mobile-bottom-nav button { flex-direction: row; gap: 5px; font-size: 8px; }
+  .topbar { height: 46px; min-height: 46px; padding-left: 12px; padding-right: 12px; }
+  .topbar-actions { gap: 5px; }
+  .page-content { padding: 12px 14px 10px; }
+  .welcome-row { margin-bottom: 10px; gap: 8px; }
+  .welcome-row h1 { margin-top: 4px; font-size: 22px; }
+  .page-heading { margin-bottom: 12px; gap: 8px; }
+  .page-heading h1 { margin: 3px 0; font-size: 22px; }
+  .balance-hero { min-height: 0; padding: 13px 16px; }
+  .hero-subline { margin-bottom: 12px; }
+  .hero-add-btn { margin-top: 10px; }
+  .weekly-card, .panel { padding: 13px; }
+  .stats-grid { gap: 8px; margin: 9px 0; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stat-card { padding: 10px; }
+  .stat-icon { margin-bottom: 7px; }
+  .dashboard-lower { grid-template-columns: minmax(0, 1.2fr) minmax(230px, .8fr); gap: 10px; }
+  .checkin-grid { grid-template-columns: repeat(auto-fill, minmax(23px, 1fr)); gap: 3px; }
+  .checkin-cell { height: 21px; }
+  .checkin-legend { margin: 10px 0 8px; }
+  .checkin-footer { margin-top: 9px; }
+  .modal-overlay { align-items: flex-start; padding: 5dvh 10px; }
+  .modal-card { max-height: 90vh; max-height: 90dvh; overflow-y: auto; overscroll-behavior: contain; }
+  .modal-header { padding: 13px 16px 10px; }
+  .modal-form { padding: 12px 16px 16px; }
+  .modal-foot { margin-top: 12px; padding-top: 10px; }
+  .toast { bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Prévenir les débordements des enfants de grille et garder les dialogues utilisables. */
+.modal-card { min-width: 0; max-width: min(510px, 100%); max-height: 90dvh; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+.modal-overlay { overscroll-behavior: contain; }
+.checkin-grid { grid-template-columns: repeat(auto-fill, minmax(min(26px, 100%), 1fr)); }
+.project-card, .stat-card, .panel, .dashboard-lower > *, .hero-grid > * { min-width: 0; }
+@supports (height: 100dvh) {
+  body, .app-shell { min-height: 100dvh; }
+  .modal-card { max-height: 90dvh; }
+}
