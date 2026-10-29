@@ -1,9 +1,16 @@
-# KELASI v1.6.0 — Dépenses
+# KELASI v1.6.1 — Correctif Dépenses
 
-- Ajout d’un onglet **Dépenses**, sans toucher aux onglets/fonctions antérieurs. La navigation mobile garde six raccourcis lisibles (Accueil, Versements, Dépenses, Projets, Banque, Réglages); les autres pages restent dans la sidebar/menu mobile.
-- Comptes, catégories, opérations (dépense/revenu/virement), reçus image compressés en data URL, tableau de bord mensuel, recherche/filtres/tri, budgets et échéances récurrentes hebdo/mensuelles/annuelles. Les dépenses sont calculées à part de l’épargne.
-- Clés offline dédiées : `kelasi-depenses-<userId>-comptes`, `-categories`, `-transactions`, `-recurrences`, `-budgets`, `-deletedDepenseIds`; le stockage historique `kelasi-data-<userId>` et son contenu existant sont conservés.
-- Sauvegarde globale JSON : ajout de `depenses` et import rétrocompatible de sauvegardes antérieures. Aucun export CSV/PDF/Excel des dépenses.
-- Synchronisation Supabase best-effort, IDs persistants, fusion timestampée et registre de suppressions V1.4. Exécuter `SUPABASE_DEPENSES_V1.6.sql` avant le déploiement cloud : il crée cinq tables RLS par utilisateur et étend le CHECK des tombstones. Sans tables disponibles, la copie locale demeure; vérifier le schéma Supabase après exécution SQL.
-- Test/build : `npm ci` (npm 10.9.2 local) puis tests et build réussis. Les tests couvrent soldes/virements, occurrences idempotentes, budgets, agrégations, tombstones et restauration ancienne. Bundle JS > 500 kB signalé par Vite; npm signale 7 vulnérabilités héritées/dépendances (5 faibles, 1 modérée, 1 élevée).
-- **Limites non validées visuellement** : pas de navigateur/test e2e ni de projet Supabase disponible; rendu téléphone/tablette/paysage, exécution réelle SQL/RLS et synchronisation multi-appareils non vérifiés visuellement/en production.
+## Correctif livré
+- Clé canonique unique du modèle Dépenses : `accounts`. Le composant, le modèle normalisé, la persistance locale (`kelasi-depenses-<userId>-accounts`), les fusions, les tombstones et les mappings Supabase utilisent maintenant cette clé. Le nom de table SQL `depenses_comptes` reste intentionnellement inchangé.
+- Import rétrocompatible : `comptes` est accepté dans les anciens exports JSON, dans le champ agrégé `depenses`, dans l’ancien stockage local et pour les tombstones historiques; les données relues sont normalisées en `accounts`.
+- Harmonisation et contrôle des cinq collections `accounts`, `categories`, `transactions`, `recurrences`, `budgets` dans l’UI, le stockage, l’import/export JSON, la fusion/sync et les cinq tables SQL. Les champs métier employés (`accountId`, `destinationAccountId`, `categoryId`, `limit`, `nextDate`, `updated_at`/`created_at`) sont conservés dans `data` JSONB et partagés entre calculs et UI.
+- Ajout d’un test `renderToString` de `ExpensesPage` sur les états par défaut et peuplé, couvrant aussi le rendu des onglets transactions, budgets et récurrences. Ajout d’un test de migration `comptes` vers `accounts` et de conversion de tombstone.
+
+## Vérifications exécutées
+- `npm ci` avec npm 10.9.2 installé localement après constat que le lanceur npm global échoue (`Cannot find module '../lib/cli.js'`). Installation terminée; audit npm rapporte 7 vulnérabilités héritées (5 faibles, 1 modérée, 1 élevée).
+- `npm test` : 22 tests réussis, 0 échec, y compris l’ensemble des tests antérieurs et le test SSR.
+- `npm run build` : réussi avec Vite 5.4.21; avertissement de bundle JS minifié > 500 kB.
+
+## Limites restantes
+- Rendu SSR de composants, pas validation visuelle dans un navigateur : apparence, interaction, tailles écran et comportement responsive non vérifiés visuellement.
+- Aucun projet/compte Supabase réel n’était disponible : exécution effective de `SUPABASE_DEPENSES_V1.6.sql`, politiques RLS et synchronisation réseau/multi-appareils restent non vérifiées.

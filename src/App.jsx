@@ -107,7 +107,7 @@ async function pullCloud(userId) {
   const expenseResults = await Promise.all(expenseTables.map(table => supabase.from(table).select('id,data,updated_at').eq('user_id', userId).then(x => ({table,...x}))));
   const expenseRows = {}; for (const result of expenseResults) { if (result.error) { console.warn('KELASI: tables Dépenses indisponibles; conservation locale', result.error.message); continue; } expenseRows[result.table] = (result.data || []).map(row => ({...row.data,id:row.id,updated_at:row.updated_at})); }
   const ids = name => tombstones.filter(row => row.table_name === name).map(row => row.record_id);
-  return { entries: e.data || [], snapshots: b.data || [], goals: g.data || [], dettes: debtsAvailable ? (d.data || []).map(fromDebtRow) : [], deletedEntryIds: ids('versements'), deletedSnapshotIds: ids('soldes_bancaires'), deletedGoalIds: ids('projets'), deletedDebtIds: ids('dettes'), ...Object.fromEntries(['comptes','categories','transactions','recurrences','budgets'].map((key,i)=>[key,expenseRows[expenseTables[i]]||[]])), deletedDepenseIds: tombstones.filter(row=>row.table_name.startsWith('depenses_')).map(row=>`${({depenses_comptes:'comptes',depenses_categories:'categories',depenses_transactions:'transactions',depenses_recurrences:'recurrences',depenses_budgets:'budgets'})[row.table_name]}:${row.record_id}`), defaultGoalsSeeded: tombstones.some(row => row.table_name === '_meta' && row.record_id === 'default-goals-seeded') };
+  return { entries: e.data || [], snapshots: b.data || [], goals: g.data || [], dettes: debtsAvailable ? (d.data || []).map(fromDebtRow) : [], deletedEntryIds: ids('versements'), deletedSnapshotIds: ids('soldes_bancaires'), deletedGoalIds: ids('projets'), deletedDebtIds: ids('dettes'), ...Object.fromEntries(['accounts','categories','transactions','recurrences','budgets'].map((key,i)=>[key,expenseRows[expenseTables[i]]||[]])), deletedDepenseIds: tombstones.filter(row=>row.table_name.startsWith('depenses_')).map(row=>`${({depenses_comptes:'accounts',depenses_categories:'categories',depenses_transactions:'transactions',depenses_recurrences:'recurrences',depenses_budgets:'budgets'})[row.table_name]}:${row.record_id}`), defaultGoalsSeeded: tombstones.some(row => row.table_name === '_meta' && row.record_id === 'default-goals-seeded') };
 }
 function fromDebtRow(row) { return { id: row.id, label: row.label, totalAmount: Number(row.total_amount), monthlyPayment: Number(row.monthly_payment), firstPaymentDate: row.first_payment_date, alreadyPaid: Number(row.already_paid || 0), created_at: row.created_at, updated_at: row.updated_at }; }
 function toDebtRow(row, userId) { return { id: row.id, user_id: userId, label: row.label, total_amount: row.totalAmount, monthly_payment: row.monthlyPayment, first_payment_date: row.firstPaymentDate, already_paid: row.alreadyPaid || 0, created_at: row.created_at, updated_at: row.updated_at }; }
@@ -119,13 +119,13 @@ async function pushCloud(userId, data) {
     ...(data.deletedSnapshotIds || []).map(record_id => ({ user_id: userId, table_name: 'soldes_bancaires', record_id })),
     ...(data.deletedGoalIds || []).map(record_id => ({ user_id: userId, table_name: 'projets', record_id })),
     ...(data.deletedDebtIds || []).map(record_id => ({ user_id: userId, table_name: 'dettes', record_id })),
-    ...(data.deletedDepenseIds || []).map(key => { const [kind,...rest]=key.split(':'); const table={comptes:'depenses_comptes',categories:'depenses_categories',transactions:'depenses_transactions',recurrences:'depenses_recurrences',budgets:'depenses_budgets'}[kind]; return table ? {user_id:userId,table_name:table,record_id:rest.join(':')} : null; }).filter(Boolean)
+    ...(data.deletedDepenseIds || []).map(key => { const [kind,...rest]=key.split(':'); const table={accounts:'depenses_comptes',categories:'depenses_categories',transactions:'depenses_transactions',recurrences:'depenses_recurrences',budgets:'depenses_budgets'}[kind]; return table ? {user_id:userId,table_name:table,record_id:rest.join(':')} : null; }).filter(Boolean)
   ];
   if (tombstones.length) {
     const { error } = await supabase.from('sync_tombstones').upsert(tombstones, { onConflict: 'user_id,table_name,record_id' });
     if (error && !(error.message||'').match(/check constraint|violates/i)) throw error;
   }
-  const expenseTableByKind={comptes:'depenses_comptes',categories:'depenses_categories',transactions:'depenses_transactions',recurrences:'depenses_recurrences',budgets:'depenses_budgets'};
+  const expenseTableByKind={accounts:'depenses_comptes',categories:'depenses_categories',transactions:'depenses_transactions',recurrences:'depenses_recurrences',budgets:'depenses_budgets'};
   const expenseDeletes=Object.entries(expenseTableByKind).flatMap(([kind,table])=>[(data.deletedDepenseIds||[]).filter(x=>x.startsWith(`${kind}:`)).map(x=>[table,x.slice(kind.length+1)])]).flat();
   const deletes = [
     ['versements', data.deletedEntryIds], ['soldes_bancaires', data.deletedSnapshotIds],
@@ -145,7 +145,7 @@ async function pushCloud(userId, data) {
     const { error } = await supabase.from(table).upsert(payload, { onConflict: 'id' });
     if (error) throw error;
   }
-  const expenseMaps={comptes:'depenses_comptes',categories:'depenses_categories',transactions:'depenses_transactions',recurrences:'depenses_recurrences',budgets:'depenses_budgets'};
+  const expenseMaps={accounts:'depenses_comptes',categories:'depenses_categories',transactions:'depenses_transactions',recurrences:'depenses_recurrences',budgets:'depenses_budgets'};
   for (const [key,table] of Object.entries(expenseMaps)) { const rows=data[key]||[]; if (!rows.length) continue; const {error}=await supabase.from(table).upsert(rows.map(row=>({id:row.id,user_id:userId,data:row,updated_at:row.updated_at||row.created_at||new Date().toISOString()})),{onConflict:'user_id,id'}); if(error) console.warn('KELASI: sauvegarde Dépenses en attente',table,error.message); }
   if (data.dettes?.length) { const { error } = await supabase.from('dettes').upsert(data.dettes.map(row => toDebtRow(row, userId)), { onConflict: 'id' }); if (error && /does not exist|schema cache/i.test(error.message || '')) return; if (error) throw error; }
 
@@ -453,7 +453,7 @@ function App() {
       const parsed = JSON.parse(await file.text());
       if (!Array.isArray(parsed.entries)) throw new Error('Le fichier ne contient pas de liste de versements KELASI valide.');
       const safeEntries = parsed.entries.filter(e => e && typeof e.id === 'string' && Number(e.amount) > 0 && ['perso','business','congo'].includes(e.category) && /^\d{4}-\d{2}-\d{2}$/.test(e.week_start));
-      const importedExpenses=parsed.depenses||Object.fromEntries(['comptes','categories','transactions','recurrences','budgets'].filter(k=>Array.isArray(parsed[k])).map(k=>[k,parsed[k]]));
+      const importedExpenses=parsed.depenses||Object.fromEntries(['accounts','comptes','categories','transactions','recurrences','budgets'].filter(k=>Array.isArray(parsed[k])).map(k=>[k,parsed[k]]));
       updateData(d => ({ ...d, ...mergeExpenseData(d,importedExpenses), entries: mergeRows(d.entries, safeEntries).filter(row => !(d.deletedEntryIds || []).includes(row.id)), snapshots: mergeRows(d.snapshots, Array.isArray(parsed.snapshots) ? parsed.snapshots : []).filter(row => !(d.deletedSnapshotIds || []).includes(row.id)), goals: mergeRows(d.goals, Array.isArray(parsed.goals) ? parsed.goals : []).filter(row => !(d.deletedGoalIds || []).includes(row.id)), dettes: mergeRows(d.dettes || [], Array.isArray(parsed.dettes) ? parsed.dettes : []).filter(row => !(d.deletedDebtIds || []).includes(row.id)) }));
       notify(`${safeEntries.length} versement(s) importé(s).`);
     } catch (err) { setImportError(err.message || 'Import impossible.'); }
