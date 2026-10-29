@@ -11,6 +11,7 @@ import { cloudConfigured, supabase } from './lib/supabase';
 import { newId, readLocal, writeLocal } from './lib/storage';
 import { DEFAULT_WEEKLY_TARGET, normalizeWeeklyTarget, sumAmounts, sumByCategory, totalAllocated, isWeekValidated, isWeekMissed, forecastTotal, bankGap, projectProgress } from './lib/calc.js';
 import { migrateData } from './lib/migrate.js';
+import { mergeData, mergeRows } from './lib/sync.js';
 import { computeDebtSchedule } from './utils/debt.js';
 import { computePeriodTotals, getCurrentPeriod, isPeriodValidated, convertEurToXaf, convertXafToEur } from './utils/periods.js';
 
@@ -34,22 +35,34 @@ const CATEGORIES = [
   { id: 'congo', label: 'Projets au Congo', color: 'orange', icon: Target }
 ];
 const DEFAULT_GOALS = [
-  { id: 'goal-parcelle', title: 'Acheter une parcelle', target: 12000, category: 'Immobilier', color: 'orange' },
-  { id: 'goal-maison', title: 'Construire une maison', target: 25000, category: 'Immobilier', color: 'mint' },
-  { id: 'goal-mariage', title: 'Mariage & dot', target: 8000, category: 'Personnel', color: 'pink' },
-  { id: 'goal-business', title: 'Lancer un business', target: 5000, category: 'Business', color: 'violet' },
-  { id: 'goal-reserve', title: 'Réserve de sécurité', target: 3000, category: 'Sécurité', color: 'blue' },
-  { id: 'congo-1', title: 'Parcelle à Brazzaville', target: 12000, category: 'Congo · Immobilier', color: 'orange', indicativeDate: '2028-11' },
-  { id: 'congo-2', title: 'Parcelle à Pointe-Noire', target: 9000, category: 'Congo · Immobilier', color: 'orange', indicativeDate: '2028-02' },
-  { id: 'congo-3', title: 'Construction maison familiale', target: 25000, category: 'Congo · Habitat', color: 'mint', indicativeDate: '2031-03' },
-  { id: 'congo-4', title: 'Raccordement eau & électricité', target: 2500, category: 'Congo · Habitat', color: 'blue', indicativeDate: '2027-04' },
-  { id: 'congo-5', title: 'Boutique / activité commerciale', target: 5000, category: 'Congo · Business', color: 'violet', indicativeDate: '2028-01' },
-  { id: 'congo-6', title: 'Moto pour activité', target: 1800, category: 'Congo · Mobilité', color: 'pink', indicativeDate: '2027-04' },
-  { id: 'congo-7', title: 'Forage communautaire', target: 7000, category: 'Congo · Solidarité', color: 'blue', indicativeDate: '2028-09' },
-  { id: 'congo-8', title: 'Études & formation', target: 3000, category: 'Congo · Formation', color: 'violet', indicativeDate: '2027-08' },
-  { id: 'congo-9', title: 'Mariage & dot', target: 8000, category: 'Congo · Famille', color: 'pink', indicativeDate: '2028-05' },
-  { id: 'congo-10', title: 'Transport de matériaux', target: 4500, category: 'Congo · Logistique', color: 'orange', indicativeDate: '2027-12' }
-];
+  { id: '9f4d0000-0000-4000-8000-000000000001', title: 'Acheter une parcelle', target: 12000, category: 'Immobilier', color: 'orange' },
+  { id: '9f4d0000-0000-4000-8000-000000000002', title: 'Construire une maison', target: 25000, category: 'Immobilier', color: 'mint' },
+  { id: '9f4d0000-0000-4000-8000-000000000003', title: 'Mariage & dot', target: 8000, category: 'Personnel', color: 'pink' },
+  { id: '9f4d0000-0000-4000-8000-000000000004', title: 'Lancer un business', target: 5000, category: 'Business', color: 'violet' },
+  { id: '9f4d0000-0000-4000-8000-000000000005', title: 'Réserve de sécurité', target: 3000, category: 'Sécurité', color: 'blue' },
+  { id: '9f4d0000-0000-4000-8000-000000000006', title: 'Parcelle à Brazzaville', target: 12000, category: 'Congo · Immobilier', color: 'orange', indicativeDate: '2028-11' },
+  { id: '9f4d0000-0000-4000-8000-000000000007', title: 'Parcelle à Pointe-Noire', target: 9000, category: 'Congo · Immobilier', color: 'orange', indicativeDate: '2028-02' },
+  { id: '9f4d0000-0000-4000-8000-000000000008', title: 'Construction maison familiale', target: 25000, category: 'Congo · Habitat', color: 'mint', indicativeDate: '2031-03' },
+  { id: '9f4d0000-0000-4000-8000-000000000009', title: 'Raccordement eau & électricité', target: 2500, category: 'Congo · Habitat', color: 'blue', indicativeDate: '2027-04' },
+  { id: '9f4d0000-0000-4000-8000-000000000010', title: 'Boutique / activité commerciale', target: 5000, category: 'Congo · Business', color: 'violet', indicativeDate: '2028-01' },
+  { id: '9f4d0000-0000-4000-8000-000000000011', title: 'Moto pour activité', target: 1800, category: 'Congo · Mobilité', color: 'pink', indicativeDate: '2027-04' },
+  { id: '9f4d0000-0000-4000-8000-000000000012', title: 'Forage communautaire', target: 7000, category: 'Congo · Solidarité', color: 'blue', indicativeDate: '2028-09' },
+  { id: '9f4d0000-0000-4000-8000-000000000013', title: 'Études & formation', target: 3000, category: 'Congo · Formation', color: 'violet', indicativeDate: '2027-08' },
+  { id: '9f4d0000-0000-4000-8000-000000000014', title: 'Mariage & dot', target: 8000, category: 'Congo · Famille', color: 'pink', indicativeDate: '2028-05' },
+  { id: '9f4d0000-0000-4000-8000-000000000015', title: 'Transport de matériaux', target: 4500, category: 'Congo · Logistique', color: 'orange', indicativeDate: '2027-12' }
+ ];
+const DEFAULT_GOAL_BY_SIGNATURE = new Map(DEFAULT_GOALS.map(goal => [`${goal.title}|${goal.target}|${goal.category}`, goal.id]));
+function migrateDefaultGoalIds(goals = [], deletedIds = []) {
+  const migrated = new Map();
+  for (const goal of goals) {
+    const canonicalId = DEFAULT_GOAL_BY_SIGNATURE.get(`${goal.title}|${goal.target}|${goal.category}`);
+    if (canonicalId && (deletedIds || []).includes(canonicalId)) continue;
+    const row = canonicalId ? { ...goal, id: canonicalId } : goal;
+    const previous = migrated.get(row.id);
+    if (!previous || (Date.parse(row.updated_at || '') || 0) >= (Date.parse(previous.updated_at || '') || 0)) migrated.set(row.id, row);
+  }
+  return [...migrated.values()];
+}
 
 function isoDate(d) {
   const dt = new Date(d);
@@ -70,62 +83,48 @@ function money(n, compact = false) {
 }
 function sumBy(arr, fn) { return arr.reduce((sum, item) => sum + Number(fn(item) || 0), 0); }
 function weeklyTargetFrom(data) { return normalizeWeeklyTarget(data.weeklyTarget ?? DEFAULT_WEEKLY_TARGET); }
-function blankData() { return migrateData({ entries: [], snapshots: [], goals: DEFAULT_GOALS.map(g => ({ ...g, id: newId(), allocated: 0 })), dettes: [], deletedDebtIds: [], deletedEntryIds: [], deletedSnapshotIds: [], deletedGoalIds: [], weeklyTarget: DEFAULT_WEEKLY_TARGET, monthlyTarget: 400, frequency: 'weekly', reminderDay: 6, reminderMoment: 'morning', showDebtsInBalance: false }); }
-function mergeRows(remote = [], local = []) {
-  const m = new Map(remote.map(r => [r.id, r]));
-  local.forEach(r => {
-    const previous = m.get(r.id);
-    const stamp = row => Date.parse(row?.updated_at || row?.created_at || '') || 0;
-    if (!previous || stamp(r) >= stamp(previous)) m.set(r.id, { ...previous, ...r });
-  });
-  return [...m.values()];
-}
-function mergeData(remote, local) {
-  const base = remote || (local ? {} : blankData());
-  const loc = local || {};
-  const deletedEntryIds = [...new Set([...(base.deletedEntryIds || []), ...(loc.deletedEntryIds || [])])];
-  const deletedSnapshotIds = [...new Set([...(base.deletedSnapshotIds || []), ...(loc.deletedSnapshotIds || [])])];
-  const deletedGoalIds = [...new Set([...(base.deletedGoalIds || []), ...(loc.deletedGoalIds || [])])];
-  return {
-    ...migrateData({ ...blankData(), ...base, ...loc }),
-    entries: mergeRows(base.entries || [], loc.entries || []).filter(r => !deletedEntryIds.includes(r.id)),
-    snapshots: mergeRows(base.snapshots || [], loc.snapshots || []).filter(r => !deletedSnapshotIds.includes(r.id)),
-    goals: mergeRows(base.goals || [], loc.goals || []).filter(r => !deletedGoalIds.includes(r.id)),
-    deletedEntryIds, deletedSnapshotIds, deletedGoalIds,
-    dettes: mergeRows(base.dettes || [], loc.dettes || []).filter(r => ![...(base.deletedDebtIds || []), ...(loc.deletedDebtIds || [])].includes(r.id)),
-    deletedDebtIds: [...new Set([...(base.deletedDebtIds || []), ...(loc.deletedDebtIds || [])])],
-    weeklyTarget: normalizeWeeklyTarget(loc.weeklyTarget ?? base.weeklyTarget ?? DEFAULT_WEEKLY_TARGET),
-    monthlyTarget: Number(loc.monthlyTarget ?? base.monthlyTarget ?? 400), frequency: loc.frequency ?? base.frequency ?? 'weekly', reminderMoment: loc.reminderMoment ?? base.reminderMoment ?? 'morning', showDebtsInBalance: Boolean(loc.showDebtsInBalance ?? base.showDebtsInBalance ?? false),
-    reminderDay: Number(loc.reminderDay ?? base.reminderDay ?? 6)
-  };
-}
-
+function blankData() { return migrateData({ entries: [], snapshots: [], goals: DEFAULT_GOALS.map(g => ({ ...g, allocated: 0 })), dettes: [], deletedDebtIds: [], deletedEntryIds: [], deletedSnapshotIds: [], deletedGoalIds: [], weeklyTarget: DEFAULT_WEEKLY_TARGET, monthlyTarget: 400, frequency: 'weekly', reminderDay: 6, reminderMoment: 'morning', showDebtsInBalance: false }); }
 async function pullCloud(userId) {
   if (!supabase || !navigator.onLine) return null;
-  const [e, b, g, d] = await Promise.all([
+  const [e, b, g, d, t] = await Promise.all([
     supabase.from('versements').select('*').eq('user_id', userId),
     supabase.from('soldes_bancaires').select('*').eq('user_id', userId),
     supabase.from('projets').select('*').eq('user_id', userId),
-    supabase.from('dettes').select('*').eq('user_id', userId)
+    supabase.from('dettes').select('*').eq('user_id', userId),
+    supabase.from('sync_tombstones').select('table_name,record_id').eq('user_id', userId)
   ]);
-  const error = [e.error,b.error,g.error].find(err => err && !/does not exist|schema cache/i.test(err.message || ''));
+  const error = [e.error,b.error,g.error,t.error, d.error && !/does not exist|schema cache/i.test(d.error.message || '') ? d.error : null].find(err => err);
   if (error) throw error;
-  const debtsAvailable = !d.error;
-  return { entries: e.data || [], snapshots: b.data || [], goals: g.data || [], dettes: debtsAvailable ? (d.data || []).map(fromDebtRow) : [] };
+  const debtsAvailable = !d.error || /does not exist|schema cache/i.test(d.error.message || '');
+  if (t.error) throw t.error;
+  const tombstones = t.data || [];
+  const ids = name => tombstones.filter(row => row.table_name === name).map(row => row.record_id);
+  return { entries: e.data || [], snapshots: b.data || [], goals: g.data || [], dettes: debtsAvailable ? (d.data || []).map(fromDebtRow) : [], deletedEntryIds: ids('versements'), deletedSnapshotIds: ids('soldes_bancaires'), deletedGoalIds: ids('projets'), deletedDebtIds: ids('dettes'), defaultGoalsSeeded: tombstones.some(row => row.table_name === '_meta' && row.record_id === 'default-goals-seeded') };
 }
 function fromDebtRow(row) { return { id: row.id, label: row.label, totalAmount: Number(row.total_amount), monthlyPayment: Number(row.monthly_payment), firstPaymentDate: row.first_payment_date, alreadyPaid: Number(row.already_paid || 0), created_at: row.created_at, updated_at: row.updated_at }; }
 function toDebtRow(row, userId) { return { id: row.id, user_id: userId, label: row.label, total_amount: row.totalAmount, monthly_payment: row.monthlyPayment, first_payment_date: row.firstPaymentDate, already_paid: row.alreadyPaid || 0, created_at: row.created_at, updated_at: row.updated_at }; }
 async function pushCloud(userId, data) {
   if (!supabase || !navigator.onLine) return;
-  const deletes = [
-    data.deletedEntryIds?.length ? supabase.from('versements').delete().eq('user_id', userId).in('id', data.deletedEntryIds) : Promise.resolve({ error: null }),
-    data.deletedSnapshotIds?.length ? supabase.from('soldes_bancaires').delete().eq('user_id', userId).in('id', data.deletedSnapshotIds) : Promise.resolve({ error: null }),
-    data.deletedGoalIds?.length ? supabase.from('projets').delete().eq('user_id', userId).in('id', data.deletedGoalIds) : Promise.resolve({ error: null }),
-    data.deletedDebtIds?.length ? supabase.from('dettes').delete().eq('user_id', userId).in('id', data.deletedDebtIds) : Promise.resolve({ error: null })
+  const tombstones = [
+    ...(data.defaultGoalsSeeded ? [{ user_id: userId, table_name: '_meta', record_id: 'default-goals-seeded' }] : []),
+    ...(data.deletedEntryIds || []).map(record_id => ({ user_id: userId, table_name: 'versements', record_id })),
+    ...(data.deletedSnapshotIds || []).map(record_id => ({ user_id: userId, table_name: 'soldes_bancaires', record_id })),
+    ...(data.deletedGoalIds || []).map(record_id => ({ user_id: userId, table_name: 'projets', record_id })),
+    ...(data.deletedDebtIds || []).map(record_id => ({ user_id: userId, table_name: 'dettes', record_id }))
   ];
-  const deleteResults = await Promise.all(deletes);
-  const deleteError = deleteResults.find(x => x.error)?.error;
-  if (deleteError) throw deleteError;
+  if (tombstones.length) {
+    const { error } = await supabase.from('sync_tombstones').upsert(tombstones, { onConflict: 'user_id,table_name,record_id' });
+    if (error) throw error;
+  }
+  const deletes = [
+    ['versements', data.deletedEntryIds], ['soldes_bancaires', data.deletedSnapshotIds],
+    ['projets', data.deletedGoalIds], ['dettes', data.deletedDebtIds]
+  ];
+  for (const [table, ids] of deletes) {
+    if (!ids?.length) continue;
+    const { error } = await supabase.from(table).delete().eq('user_id', userId).in('id', ids);
+    if (error && !(table === 'dettes' && /does not exist|schema cache/i.test(error.message || ''))) throw error;
+  }
   const records = [
     ['versements', data.entries || []], ['soldes_bancaires', data.snapshots || []], ['projets', data.goals || []]
   ];
@@ -136,9 +135,7 @@ async function pushCloud(userId, data) {
     if (error) throw error;
   }
   if (data.dettes?.length) { const { error } = await supabase.from('dettes').upsert(data.dettes.map(row => toDebtRow(row, userId)), { onConflict: 'id' }); if (error && /does not exist|schema cache/i.test(error.message || '')) return; if (error) throw error; }
-  if (data.deletedEntryIds?.length || data.deletedSnapshotIds?.length || data.deletedGoalIds?.length || data.deletedDebtIds?.length) {
-    await writeLocal(userId, { ...data, deletedEntryIds: [], deletedSnapshotIds: [], deletedGoalIds: [], deletedDebtIds: [] });
-  }
+
 }
 
 function App() {
@@ -179,6 +176,9 @@ function App() {
   const [reminderNotice, setReminderNotice] = useState('');
   const [importError, setImportError] = useState('');
   const cloudLoadRef = useRef('');
+  const dataRef = useRef(data);
+  const syncInFlightRef = useRef(false);
+  dataRef.current = data;
 
   useEffect(() => {
     if (sessionStorage.getItem('kelasi-sw-update-toast') === '1') sessionStorage.removeItem('kelasi-sw-update-toast');
@@ -230,10 +230,14 @@ function App() {
         let merged;
         if (remote) {
           merged = mergeData(remote, local);
-          // Default projects are only added when both local and cloud data are genuinely empty.
-          if (!remote.goals.length && !local?.goals?.length) merged.goals = DEFAULT_GOALS.map(g => ({ ...g, id: newId(), allocated: 0 }));
+          merged.goals = migrateDefaultGoalIds(merged.goals, merged.deletedGoalIds);
+          // Seed once remotely; marker prevents a later all-projects deletion from restoring defaults.
+          if (!remote.defaultGoalsSeeded && !local?.goals?.length && !remote.goals.length) {
+            merged.goals = DEFAULT_GOALS.filter(goal => !(remote.deletedGoalIds || []).includes(goal.id)).map(g => ({ ...g, allocated: 0 }));
+          }
+          merged.defaultGoalsSeeded = true;
           await writeLocal(userId, merged);
-        } else merged = mergeData(null, local);
+        } else { merged = mergeData(null, local, blankData()); merged.goals = migrateDefaultGoalIds(merged.goals, merged.deletedGoalIds); if (!local) merged.defaultGoalsSeeded = false; }
         setData(merged);
         if (cloudConfigured && session && navigator.onLine && remote) {
           await pushCloud(userId, merged);
@@ -243,7 +247,7 @@ function App() {
         cloudLoadRef.current = userId;
       } catch (err) {
         console.error(err);
-        if (!cancelled) { setData(mergeData(null, await readLocal(userId))); setSyncStatus('pending'); }
+        if (!cancelled) { setData(mergeData(null, await readLocal(userId), blankData())); setSyncStatus('pending'); }
       } finally { if (!cancelled) setLoadingData(false); }
     }
     init();
@@ -271,15 +275,42 @@ function App() {
 
   useEffect(() => {
     if (!userId || !online || !cloudConfigured || !session) return;
-    const retry = () => {
-      if (cloudLoadRef.current === userId) {
-        setSyncStatus('syncing');
-        pushCloud(userId, data).then(() => setSyncStatus('synced')).catch(() => setSyncStatus('pending'));
-      }
+    let disposed = false;
+    const refresh = async () => {
+      if (syncInFlightRef.current || !navigator.onLine || cloudLoadRef.current !== userId) return;
+      syncInFlightRef.current = true;
+      setSyncStatus('syncing');
+      try {
+        const remote = await pullCloud(userId);
+        if (!remote || disposed) return;
+        const merged = mergeData(remote, dataRef.current, blankData());
+        merged.goals = migrateDefaultGoalIds(merged.goals, merged.deletedGoalIds);
+        merged.defaultGoalsSeeded = Boolean(remote.defaultGoalsSeeded || dataRef.current.defaultGoalsSeeded);
+        await writeLocal(userId, merged);
+        if (disposed) return;
+        dataRef.current = merged;
+        setData(merged);
+        await pushCloud(userId, merged);
+        if (!disposed) setSyncStatus('synced');
+      } catch (err) {
+        console.warn('KELASI: actualisation cloud en attente', err);
+        if (!disposed) setSyncStatus('pending');
+      } finally { syncInFlightRef.current = false; }
     };
-    window.addEventListener('online', retry);
-    return () => window.removeEventListener('online', retry);
-  }, [userId, online, cloudConfigured, session, data]);
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    window.addEventListener('focus', refresh);
+    window.addEventListener('online', refresh);
+    document.addEventListener('visibilitychange', onVisible);
+    const timer = window.setInterval(refresh, 60000);
+    refresh();
+    return () => {
+      disposed = true;
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('online', refresh);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(timer);
+    };
+  }, [userId, online, cloudConfigured, session]);
 
   const updateData = useCallback((fn) => setData(current => fn(current)), []);
   const entries = data.entries || [];
@@ -408,7 +439,7 @@ function App() {
       const parsed = JSON.parse(await file.text());
       if (!Array.isArray(parsed.entries)) throw new Error('Le fichier ne contient pas de liste de versements KELASI valide.');
       const safeEntries = parsed.entries.filter(e => e && typeof e.id === 'string' && Number(e.amount) > 0 && ['perso','business','congo'].includes(e.category) && /^\d{4}-\d{2}-\d{2}$/.test(e.week_start));
-      updateData(d => ({ ...d, entries: mergeRows(d.entries, safeEntries), snapshots: mergeRows(d.snapshots, Array.isArray(parsed.snapshots) ? parsed.snapshots : []), goals: mergeRows(d.goals, Array.isArray(parsed.goals) ? parsed.goals : []), dettes: mergeRows(d.dettes || [], Array.isArray(parsed.dettes) ? parsed.dettes : []) }));
+      updateData(d => ({ ...d, entries: mergeRows(d.entries, safeEntries).filter(row => !(d.deletedEntryIds || []).includes(row.id)), snapshots: mergeRows(d.snapshots, Array.isArray(parsed.snapshots) ? parsed.snapshots : []).filter(row => !(d.deletedSnapshotIds || []).includes(row.id)), goals: mergeRows(d.goals, Array.isArray(parsed.goals) ? parsed.goals : []).filter(row => !(d.deletedGoalIds || []).includes(row.id)), dettes: mergeRows(d.dettes || [], Array.isArray(parsed.dettes) ? parsed.dettes : []).filter(row => !(d.deletedDebtIds || []).includes(row.id)) }));
       notify(`${safeEntries.length} versement(s) importé(s).`);
     } catch (err) { setImportError(err.message || 'Import impossible.'); }
   };
