@@ -56,7 +56,7 @@ for each row execute procedure public.handle_new_user();
 -- KELASI V1.2 — schéma complet idempotent, conservant les tables existantes.
 create extension if not exists pgcrypto;
 alter table public.projets add column if not exists deadline date null;
- if not exists public.dettes (
+create table if not exists public.dettes (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   label text not null,
